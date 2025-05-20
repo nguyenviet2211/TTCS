@@ -37,4 +37,5 @@ python api.py
 
 3. Upload an image and click "Classify Image" to see the results
 
-4. Download Model: 
+4. Download Model: `https://drive.google.com/drive/folders/1EFlVd3QXqfKwDr0KJkauSqTDcyVDkaVH?usp=sharing`
+
