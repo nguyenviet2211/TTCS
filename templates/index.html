@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .result-container {
+            margin-top: 20px;
+            display: none;
+        }
+        .preview-image {
+            max-width: 300px;
+            margin-top: 10px;
+        }
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+        #drop-area.dragover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Image Classifier</h1>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <form id="uploadForm">
+                            <div class="mb-3">
+                                <label for="modelSelect" class="form-label">Select Model</label>
+                                <select class="form-select" id="modelSelect" required>
+                                    <option value="bird">Bird Classifier</option>
+                                    <option value="trash">Trash Classifier</option>
+                                    <option value="emotion">Emotion Classifier</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="imageFile" class="form-label">Choose or Drop an image</label>
+                                <div id="drop-area" class="border border-primary rounded p-3 text-center" style="background: #f8f9fa; cursor: pointer;">
+                                    <input type="file" class="form-control d-none" id="imageFile" accept="image/*" required>
+                                    <span id="drop-text">Click or drag & drop image here</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Classify Image</button>
+                        </form>
+
+                        <div class="loading text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Processing image...</p>
+                        </div>
+
+                        <div class="result-container">
+                            <img id="preview" class="preview-image img-fluid rounded">
+                            <div class="mt-3">
+                                <h4>Result:</h4>
+                                <p id="result" class="lead"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('imageFile');
+            const modelSelect = document.getElementById('modelSelect');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an image');
+                return;
+            }
+
+            // Show loading spinner
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.result-container').style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('model', modelSelect.value);
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5001/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Display results
+                const resultContainer = document.querySelector('.result-container');
+                const preview = document.getElementById('preview');
+                const result = document.getElementById('result');
+
+                // Show preview
+                preview.src = URL.createObjectURL(file);
+                
+                // Show result
+                result.textContent = `Predicted: ${data.class} (${(data.confidence * 100).toFixed(2)}%)`;
+                result.className = 'lead';
+
+                resultContainer.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                document.querySelector('.loading').style.display = 'none';
+            }
+        });
+
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('imageFile');
+        const dropText = document.getElementById('drop-text');
+
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+
+        dropArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                dropText.textContent = e.dataTransfer.files[0].name;
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files && fileInput.files.length > 0) {
+                dropText.textContent = fileInput.files[0].name;
+            } else {
+                dropText.textContent = 'Click or drag & drop image here';
+            }
+        });
+    </script>
+</body>
+</html> 
